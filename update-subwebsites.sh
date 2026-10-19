@@ -111,12 +111,6 @@ if [[ ${#bad_params[@]} -gt 0 ]]; then
   exit 1
 fi
 
-if [[ ! -d "$REPO_ROOT/node_modules" ]]; then
-  echo "Root node_modules missing — running npm install..."
-  ( cd "$REPO_ROOT" && npm install )
-  echo ""
-fi
-
 echo "Merging submodules in..."
 echo ""
 

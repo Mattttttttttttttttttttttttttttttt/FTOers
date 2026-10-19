@@ -1,0 +1,3 @@
+[submodule "submodules/FTO-alg-finder"]
+	path = submodules/FTO-alg-finder
+	url = https://github.com/Abid-speedcuber/FTO-alg-finder
