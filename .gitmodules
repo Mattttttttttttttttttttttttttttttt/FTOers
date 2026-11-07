@@ -1,3 +1,6 @@
 [submodule "submodules/FTO-alg-finder"]
 	path = submodules/FTO-alg-finder
 	url = https://github.com/Abid-speedcuber/FTO-alg-finder
+[submodule "submodules/virtual"]
+	path = submodules/virtual
+	url = https://github.com/Abid-speedcuber/Virtual-FTO-hub
