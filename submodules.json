@@ -3,6 +3,7 @@
     "path": "./FTO-alg-finder/public"
   },
   "virtual": {
-    "path": "./virtual/build.mjs"
+    "path": "./virtual",
+    "build": true
   }
 }

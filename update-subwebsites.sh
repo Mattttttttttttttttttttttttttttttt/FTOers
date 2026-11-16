@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# symlink-setup.sh
 # Reads submodules.json and updates public/.
 # Safe to re-run — removes stale symlinks before recreating them.
 # Requires: git, jq
@@ -19,6 +18,8 @@ JSON Usage:
   Keys denote end paths in public/.
   \"path\":     reserved key. symlinks that directory into this path in public/, or
                 run that build script into this path in public/.
+  \"build\":    when true, install dependencies, run npm run build and symlink
+                public/<key> to its dist/ directory.
   \"updating\": reserved key. By default, skip running this build script or
                 skip updating this repo. This is an override, but arguments take precedence."
 
@@ -45,22 +46,22 @@ if [[ ! -f "$CONFIG" ]]; then
 fi
 
 # Single parse of submodules.json.
-# Reserved keys: "path" (required), "updating" (optional, default true).
+# Reserved keys: "path" (required), "updating" (default true), "build" (default false).
 # root = first path segment of "path" — the submodule id used for --param matching.
 mapfile -t entries < <(jq -r '
   def flatten(prefix):
     if (type == "object") and has("path") then
-      [{p: prefix, s: .path, u: (if has("updating") then .updating else true end), r: (.path | split(" ")[0] | sub("^\\./";"") | sub("/$";"") | split("/")[0])}]
+      [{p: prefix, s: .path, u: (if has("updating") then .updating else true end), r: (.path | split(" ")[0] | sub("^\\./";"") | sub("/$";"") | split("/")[0]), b: (.build // false)}]
     else
       [ to_entries[] | (if prefix == "" then .key else prefix + "/" + .key end) as $np | (.value | flatten($np))[] ]
     end;
-  flatten("") | .[] | [.p, .s, (.u | tostring), .r] | @tsv
+  flatten("") | .[] | [.p, .s, (.u | tostring), .r, (.b | tostring)] | @tsv
 ' "$CONFIG")
 
 # Distinct submodule roots available for CLI selection (case-insensitive).
 declare -A valid_roots=()
 for entry in "${entries[@]}"; do
-  IFS=$'\t' read -r _ _ _ root <<< "$entry"
+  IFS=$'\t' read -r _ _ _ root _ <<< "$entry"
   valid_roots["${root,,}"]="$root"
 done
 
@@ -120,7 +121,7 @@ declare -A root_repo_false=()
 declare -A root_repo_true=()
 declare -A all_roots=()
 for entry in "${entries[@]}"; do
-  IFS=$'\t' read -r _ full_path updating_flag root <<< "$entry"
+  IFS=$'\t' read -r _ full_path updating_flag root _ <<< "$entry"
   all_roots["$root"]=1
 
   src_part="${full_path%% *}"
@@ -170,7 +171,7 @@ for root in "${!all_roots[@]}"; do
 done
 
 if [[ ${#update_paths[@]} -gt 0 ]]; then
-  git submodule update --remote --merge --recursive -- "${update_paths[@]}"
+  git submodule update --init --remote --merge --recursive -- "${update_paths[@]}"
 else
   echo "  [skip] no submodules flagged for update"
 fi
@@ -179,7 +180,7 @@ echo "Updating public/ from submodules.json..."
 echo ""
 
 printf '%s\n' "${entries[@]}" \
-| while IFS=$'\t' read -r pub_path full_path updating_flag root; do
+| while IFS=$'\t' read -r pub_path full_path updating_flag root npm_build; do
 
   # plain params
   if [[ ${#selected_roots[@]} -gt 0 && -z "${selected_roots[$root]:-}" ]]; then
@@ -203,7 +204,38 @@ printf '%s\n' "${entries[@]}" \
     is_file=true
   fi
 
-  if [[ "$is_file" == "true" ]]; then
+  if [[ "$npm_build" == "true" ]]; then
+    if [[ "$updating_flag" == "false" ]]; then
+      echo "  [skip] public/$pub_path — updating: false"
+      continue
+    fi
+
+    build_dir="$SUBMODULES_DIR/$src_rel"
+    echo "  [install] installing build dependencies for public/$pub_path"
+    (
+      cd "$build_dir"
+      if [[ -f package-lock.json || -f npm-shrinkwrap.json ]]; then
+        npm ci --include=dev
+      else
+        npm install --include=dev
+      fi
+    )
+    echo "  [build] running npm run build for public/$pub_path"
+    ( cd "$build_dir" && npm run build )
+
+    if [[ ! -d "$build_dir/dist" || -z "$(ls -A "$build_dir/dist")" ]]; then
+      echo "  [error] public/$pub_path — build did not produce a nonempty dist/ directory" >&2
+      exit 1
+    fi
+
+    # Link to the build output using a portable relative path.
+    mkdir -p "$link_parent"
+    relative_target="$(realpath --relative-to="$link_parent" "$build_dir/dist")"
+    rm -rf -- "$link_location"
+    ln -s "$relative_target" "$link_location"
+    echo "  [ok] public/$pub_path → $relative_target"
+
+  elif [[ "$is_file" == "true" ]]; then
     # "updating: false" skips running THIS build script only. repo update not blocked.
     if [[ "$updating_flag" == "false" ]]; then
       echo "  [skip] public/$pub_path — updating: false"
