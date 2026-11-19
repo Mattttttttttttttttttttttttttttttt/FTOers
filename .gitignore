@@ -68,4 +68,8 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
-public/
+# Track the homepage and shared backend client; generated subwebsite mounts stay ignored.
+public/virtual
+public/fto-alg-finder
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,68 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,cp,writeFile,readFile,readlink,rm,lstat} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {syncShared,sharedFiles} from '../scripts/sync-shared.mjs';
+
+async function fixture(t){
+ const root=await mkdtemp(join(tmpdir(),'ftoers-update-'));t.after(()=>rm(root,{recursive:true,force:true}));
+ await cp(new URL('../scripts/',import.meta.url),join(root,'scripts'),{recursive:true});
+ await cp(new URL('../update-subwebsites.sh',import.meta.url),join(root,'update-subwebsites.sh'));
+ await cp(new URL('../public/shared/',import.meta.url),join(root,'public/shared'),{recursive:true});
+ await mkdir(join(root,'bin'));
+ for(const name of ['git','npm'])await writeFile(join(root,'bin',name),`#!/usr/bin/env node
+const fs=require('fs');fs.appendFileSync(process.env.TEST_LOG,JSON.stringify({name:'${name}',args:process.argv.slice(2),cwd:process.cwd()})+'\\n');
+if('${name}'==='npm'&&process.argv[2]==='run'){fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/index.html','built');}
+`,{mode:0o755});
+ const config={finder:{path:'finder/main',build:true,command:['bash','../build.sh','--web'],output:'../public',required:['index.html','web/index.html','web/wasm/fto_web.wasm']},virtual:{path:'virtual',build:true,shared:'public/shared'}};
+ for(const id of ['virtual','finder/main']){await mkdir(join(root,'submodules',id),{recursive:true});await writeFile(join(root,'submodules',id,'package-lock.json'),'{}');}
+ await writeFile(join(root,'submodules/finder/build.sh'),'#!/usr/bin/env bash\nset -e\nmkdir -p ../public/web/wasm\necho landing > ../public/index.html\necho web > ../public/web/index.html\necho wasm > ../public/web/wasm/fto_web.wasm\n');
+ await writeFile(join(root,'submodules.json'),JSON.stringify(config));
+ const log=join(root,'commands.log');
+ const run=(...args)=>spawnSync('bash',[join(root,'update-subwebsites.sh'),...args],{cwd:tmpdir(),encoding:'utf8',env:{...process.env,PATH:join(root,'bin')+':'+process.env.PATH,TEST_LOG:log}});
+ return {root,run,config,log,save:()=>writeFile(join(root,'submodules.json'),JSON.stringify(config))};
+}
+test('locked update builds nested web output and standalone account copies, from another cwd',async t=>{
+ const f=await fixture(t),result=f.run('--lock');assert.equal(result.status,0,result.stderr);
+ const commands=(await readFile(f.log,'utf8')).trim().split('\n').map(JSON.parse);
+ assert.equal(commands.some(c=>c.name==='git'),false);assert.equal(commands.filter(c=>c.args[0]==='ci').length,2);
+ assert.equal(await readlink(join(f.root,'public/finder')),'../submodules/finder/public');
+ assert.equal(await readFile(join(f.root,'public/finder/web/index.html'),'utf8'),'web\n');
+ assert.equal(await readlink(join(f.root,'public/virtual')),'../submodules/virtual/dist');
+ for(const name of sharedFiles)assert.deepEqual(await readFile(join(f.root,'submodules/virtual/public/shared',name)),await readFile(join(f.root,'public/shared',name)));
+ assert.equal(f.run('--lock').status,0,'repeat update is safe');
+});
+test('selection, case folding, locking, default updating flags and plans',async t=>{
+ const f=await fixture(t);f.config.finder.updating=false;await f.save();
+ let r=f.run('--plan');assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/Git update: virtual/);assert.match(r.stdout,/finder: skip/);
+ r=f.run('FINDER','--plan');assert.match(r.stdout,/Git update: finder/);assert.match(r.stdout,/finder: skip/);
+ r=f.run('--lock','ViRtUaL','--plan');assert.match(r.stdout,/Git update: \(none\)/);assert.doesNotMatch(r.stdout,/public\/finder/);
+ assert.equal(await lstat(f.log).catch(()=>null),null,'plans have no command side effects');
+ assert.notEqual(f.run('missing').status,0);
+ r=f.run('virtual','--skip-install');assert.equal(r.status,0,r.stderr);const calls=(await readFile(f.log,'utf8')).trim().split('\n').map(JSON.parse);assert.equal(calls[0].name,'git');assert.deepEqual(calls[0].args.slice(-1),['submodules/virtual']);assert.equal(calls.some(c=>c.args[0]==='ci'),false);
+});
+test('missing nested web artifacts fail; real public directories and escaping output are protected',async t=>{
+ const f=await fixture(t);f.config.finder.required.push('web/missing.wasm');await f.save();
+ assert.notEqual(f.run('--lock','finder').status,0);assert.equal(await lstat(join(f.root,'public/finder')).catch(()=>null),null);
+ await mkdir(join(f.root,'public/virtual'));await writeFile(join(f.root,'public/virtual/keep'),'keep');
+ assert.match(f.run('--lock','virtual').stderr,/Refusing to replace/);assert.equal(await readFile(join(f.root,'public/virtual/keep'),'utf8'),'keep');
+ f.config.finder.output='../../../../outside';await f.save();assert.match(f.run('--plan').stderr,/must stay inside/);
+});
+test('shared sync refuses local edits before changing any files',async t=>{
+ const f=await fixture(t),target=join(f.root,'consumer/shared'),source=join(f.root,'public/shared');
+ await syncShared(target,{source});await writeFile(join(target,'account.js'),'friend edit');
+ await writeFile(join(source,'account.css'),'upstream edit');
+ const before=await readFile(join(target,'account.css'),'utf8');
+ await assert.rejects(syncShared(target,{source}),/overwrite local changes/);
+ assert.equal(await readFile(join(target,'account.js'),'utf8'),'friend edit');assert.equal(await readFile(join(target,'account.css'),'utf8'),before);
+});
+
+test('legacy Node build scripts receive arguments and can rebuild their real output directory',async t=>{
+ const f=await fixture(t);f.config.legacy={path:'virtual/build.mjs --small'};await f.save();
+ await writeFile(join(f.root,'submodules/virtual/build.mjs'),"import {mkdir,writeFile} from 'node:fs/promises';await mkdir(process.env.BUILD_OUT_DIR,{recursive:true});await writeFile(process.env.BUILD_OUT_DIR+'/index.html',process.argv[2]);");
+ let result=f.run('--lock','virtual');assert.equal(result.status,0,result.stderr);assert.equal(await readFile(join(f.root,'public/legacy/index.html'),'utf8'),'--small');
+ result=f.run('--lock','virtual');assert.equal(result.status,0,result.stderr);
+ f.config.legacy.updating=false;await f.save();result=f.run('--plan');assert.match(result.stdout,/Git update: finder, virtual/);
+});

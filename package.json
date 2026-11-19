@@ -1,0 +1,18 @@
+{
+  "name": "ftoers-network",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:shared": "node scripts/build-shared.mjs",
+    "configure": "node scripts/configure-backend.mjs",
+    "test": "node tests/static.test.mjs && node --test tests/update-subwebsites.test.mjs",
+    "preview": "python3 -m http.server 8080 --bind 127.0.0.1 --directory public",
+    "test:db:wasm": "node tests/postgres-wasm.mjs",
+    "test:upgrade": "node tests/recording-upgrade.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.117.3",
+    "esbuild": "0.28.2",
+    "@electric-sql/pglite": "0.5.17"
+  }
+}

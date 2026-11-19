@@ -1,9 +1,23 @@
 {
   "fto-alg-finder": {
-    "path": "./FTO-alg-finder/public"
+    "path": "./FTO-alg-finder/main",
+    "build": true,
+    "command": [
+      "bash",
+      "../build.sh",
+      "--web"
+    ],
+    "output": "../public",
+    "required": [
+      "index.html",
+      "web/index.html",
+      "web/wasm/fto-web.js",
+      "web/wasm/fto_web.wasm"
+    ]
   },
   "virtual": {
     "path": "./virtual",
-    "build": true
+    "build": true,
+    "shared": "public/shared"
   }
 }
