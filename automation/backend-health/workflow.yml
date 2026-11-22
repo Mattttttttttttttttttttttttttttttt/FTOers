@@ -1,0 +1,34 @@
+name: FTOers backend checks
+on:
+  schedule:
+    - cron: '23 6 * * *'
+    - cron: '41 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      send_email:
+        description: Send the owner-only SMTP test email
+        required: false
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: ftoers-backend-checks-${{ github.event.schedule || github.event_name }}
+  cancel-in-progress: false
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned
+      - run: python3 backend_health.py
+  email:
+    if: vars.ENABLE_EMAIL_CHECKS == 'true' && (github.event.schedule == '41 6 1 * *' || (github.event_name == 'workflow_dispatch' && inputs.send_email))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned
+      - run: python3 backend_health.py --send-email
+        env:
+          SMTP_LOGIN: ${{ secrets.SMTP_LOGIN }}
+          SMTP_KEY: ${{ secrets.SMTP_KEY }}

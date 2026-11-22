@@ -73,3 +73,8 @@ public/virtual
 public/fto-alg-finder
 supabase/.temp/
 supabase/.branches/
+
+# Python setup/test caches
+__pycache__/
+*.pyc
+.release/

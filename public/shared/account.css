@@ -66,3 +66,11 @@ dialog.ft-auth [data-wca-details]{margin:0;padding:14px;border:1px solid var(--f
 @media(max-width:400px){.ft-profile-avatar{width:52px;height:52px;flex-basis:52px;font-size:22px}.ft-profile .ft-profile-card{gap:13px}.ft-profile-card .ft-profile-name-row h3{font-size:21px}}
 
 .ft-merge .ft-proof-result{display:flex;align-items:center;gap:12px;margin:5px 0 12px}.ft-proof-check{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border:1px solid var(--ft-border);border-radius:50%;background:var(--ft-input);color:var(--ft-muted);font-size:17px;font-weight:650}.ft-proof-identity{flex:1;min-width:0}.ft-proof-identity strong{display:block;font-size:14px;font-weight:600;line-height:1.5}.ft-proof-identity small{color:var(--ft-muted);overflow-wrap:anywhere;font-size:12px;line-height:1.5}.ft-merge [data-change-proof]{flex:none;min-height:32px;padding:6px 10px;font-size:12px;background:transparent}.ft-merge [data-proof-state=verified]{border-color:var(--ft-accent)}.ft-merge [data-proof-state=verified] .ft-proof-check{color:var(--ft-accent);border-color:var(--ft-accent)}.ft-merge [data-proof-state=checking] .ft-proof-check{color:var(--ft-accent)}.ft-merge [data-proof-state=needs-sign-in] .ft-proof-check{color:#f4b4b7;border-color:#805055}.ft-merge [data-retry-check],.ft-merge [data-check-profile]{margin-top:12px}.ft-merge [data-proof-status]{line-height:1.6}.ft-merge [data-proof-state]:not([data-proof-state=idle]) [data-proof-status]{margin-bottom:0}
+
+/* Profile actions use centered icons rather than font-dependent glyph metrics. */
+.ft-profile .ft-close,.ft-merge .ft-close{display:grid;place-items:center;padding:0;min-height:0;line-height:1}
+.ft-profile .ft-close svg,.ft-merge .ft-close svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.ft-profile-footer{justify-content:flex-start}
+.ft-profile [data-sign-out]{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:9px 12px;border-color:transparent;border-radius:8px;line-height:1.4}
+.ft-profile [data-sign-out] svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ft-profile [data-sign-out]:hover{background:#a43c4818;border-color:#a43c4833}
