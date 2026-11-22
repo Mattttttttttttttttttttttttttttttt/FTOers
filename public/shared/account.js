@@ -1,3 +1,4 @@
+import {openProfile} from './profile.js';
 import {createClient} from './supabase.js';
 import {backendConfig} from './config.js';
 export const configured=!!(backendConfig.url&&backendConfig.key);
@@ -15,12 +16,13 @@ export async function rpc(name,args={}, {signal}={}){
 let revision=0;
 async function refresh(next){
  const version=++revision;if(next?.user?.id!==session?.user?.id||!next)profile=null;session=next;let profileKnown=!next;
- if(next){try{const p=await rpc('my_profile');if(version!==revision)return;profile=p;profileKnown=true;}catch(error){console.warn('FTOers account:',error.message);}}
+ if(next){try{const p=await rpc('my_profile');if(version!==revision)return;if(p?.reauth_required){await client.auth.signOut({scope:'local'});session=null;profile=null;changes.dispatchEvent(new Event('change'));openAccount('login');message('This account was merged. Sign in again to continue.');return;}profile=p;profileKnown=true;}catch(error){console.warn('FTOers account:',error.message);}}
  if(version!==revision)return;if(profile)clearVerification();changes.dispatchEvent(new Event('change'));
  if(session&&!profile&&profileKnown&&!['new-password','verify-recovery'].includes(mode))openAccount('username');
  else if(profile&&dialog?.open&&['login','signup','username','verify-signup'].includes(mode)){clearVerification();dialog.close();}
 }
-export const ready=client?client.auth.getSession().then(async({data,error})=>{if(error)throw error;await refresh(data.session);}).catch(error=>{console.warn('FTOers account:',error.message);if(callbackError){openAccount(session?'account':'login');dialog.dataset.state='error';message(['identity_already_exists','identity_already_linked'].includes(callbackError)?'This WCA account is already connected to another FTOers profile. Sign in with that profile or contact Abid.':'Sign-in was not completed. Please try again.');}}):Promise.resolve();
+export async function reloadAccount(){if(!client)return;const {data,error}=await client.auth.getSession();if(error)throw error;await refresh(data.session);}
+export const ready=client?client.auth.getSession().then(async({data,error})=>{if(error)throw error;await refresh(data.session);}).catch(error=>{console.warn('FTOers account:',error.message);if(callbackError){openAccount(session?'account':'login');dialog.dataset.state='error';message(['identity_already_exists','identity_already_linked'].includes(callbackError)?'This WCA account is already connected to another FTOers profile. Open Profile → Merge accounts to combine them.':'Sign-in was not completed. Please try again.');}}):Promise.resolve();
 client?.auth.onAuthStateChange((event,next)=>{if(event==='INITIAL_SESSION')return;setTimeout(()=>refresh(next),0);});
 let dialog,mode='login',pendingVerification=null;
 try{const saved=JSON.parse(sessionStorage.getItem('ftoers.email-verification.v1')??'null');if(['signup','recovery'].includes(saved?.kind)&&typeof saved.email==='string'&&saved.email.length<=254&&saved.email.includes('@'))pendingVerification=saved;}catch{}
@@ -87,7 +89,7 @@ async function wcaOAuth(link){
  if(link&&!session)throw Error('Sign in before connecting a WCA account.');
  const options={provider:'custom:wca',options:{redirectTo:location.origin+location.pathname}};
  const {error}=link?await client.auth.linkIdentity(options):await client.auth.signInWithOAuth(options);
- if(error){if(['identity_already_exists','identity_already_linked'].includes(error.code))throw Error('This WCA account is already connected to another FTOers profile. Sign in with that profile or contact Abid.');throw error;}
+ if(error){if(['identity_already_exists','identity_already_linked'].includes(error.code))throw Error('This WCA account is already connected to another FTOers profile. Open Profile → Merge accounts to combine them.');throw error;}
 }
 function setPasswordVisibility(button,visible){
  const input=document.getElementById(button.dataset.passwordToggle),start=input.selectionStart,end=input.selectionEnd;
@@ -96,6 +98,7 @@ function setPasswordVisibility(button,visible){
  button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(visible));button.title=label;
  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(visible?'<path d="m3 3 18 18"/>':'')+'</svg>';
 }
+export function showAccountNotice(text){ensureDialog();message(text);}
 function message(text){dialog.querySelector('[role=status]').textContent=text;}
 function success(text){dialog.dataset.state='success';dialog.querySelector('.ft-description').hidden=true;dialog.querySelector('h2').textContent={signup:'Check your email',reset:'Check your inbox','new-password':'Password updated'}[mode]??'Done';message(text);dialog.querySelector('form').hidden=true;dialog.querySelector('.ft-oauth').hidden=true;dialog.querySelector('[data-switch-caption]').hidden=true;dialog.querySelector('.ft-switch').hidden=true;dialog.querySelector('[data-back]').hidden=mode==='new-password';dialog.querySelector('[data-done]').hidden=mode!=='new-password';}
 function accountError(error){
@@ -105,7 +108,7 @@ function accountError(error){
 }
 async function busy(fn){message('');delete dialog.dataset.state;const buttons=[...dialog.querySelectorAll('button:not(.ft-close)')];buttons.forEach(b=>b.disabled=true);dialog.setAttribute('aria-busy','true');try{await fn();}catch(error){dialog.dataset.state='error';message(accountError(error));}finally{buttons.forEach(b=>b.disabled=false);dialog.removeAttribute('aria-busy');}}
 export function openAccount(next='login'){
- if(profile&&!['new-password','account'].includes(next)){openSiteSettings();return;}
+ if(profile&&!['new-password','account'].includes(next)){openProfile();return;}
  ensureDialog();mode=next==='new-password'?'new-password':session&&!profile?'username':next==='login'&&pendingVerification?'verify-'+pendingVerification.kind:next;
  const titles={account:'WCA account','verify-signup':'Confirm your email','verify-recovery':'Reset your password',login:'Sign in',signup:'Create account',username:'Choose your username',reset:'Reset password','new-password':'Set a new password'};
  const verificationDescription='Enter the code sent to '+(pendingVerification?.email??'your email')+'. You can read the email on another device.';
@@ -133,6 +136,7 @@ export function openAccount(next='login'){
 let surfaceOptions={};
 const personIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>';
 function photoURL(){const value=session?.user?.user_metadata?.avatar_url??session?.user?.user_metadata?.picture;try{const url=new URL(value);return url.protocol==='https:'?url.href:null;}catch{return null;}}
+export function renderAccountAvatar(host){avatar(host);}
 function avatar(host){host.replaceChildren();const photo=photoURL();if(session&&photo){const img=document.createElement('img');img.src=photo;img.alt='';img.referrerPolicy='no-referrer';host.append(img);}else if(session){host.textContent=(profile?.username??session.user?.user_metadata?.full_name??'A').slice(0,1).toUpperCase();}else host.innerHTML=personIcon;}
 function openSiteSettings(){surfaceOptions.onSettings?.();}
 function openSiteAbout(){surfaceOptions.onAbout?.();}
@@ -149,12 +153,12 @@ export function mountAccount(host,options={}){
  menu.onkeydown=e=>{const items=[...menu.querySelectorAll('button:not(:disabled)')],index=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){close();button.focus();}};
  function action(label,fn,{id,danger=false}={}){const item=document.createElement('button');item.type='button';item.setAttribute('role','menuitem');item.textContent=label;if(id)item.id=id;if(danger)item.className='ft-menu-danger';item.onclick=async()=>{close();await fn();};menu.append(item);}
  const render=()=>{avatar(picture);button.title=profile?.username??'Account';button.dataset.signedIn=String(!!session);menu.replaceChildren();
-  if(session&&options.showIdentity){const identity=document.createElement('div');identity.className='ft-menu-identity';const name=document.createElement('strong');name.textContent=profile?.username??session.user?.user_metadata?.full_name??'Signed in';identity.append(name);menu.append(identity);}if(!session)action('Sign in',()=>openAccount());
+  if(!session)action('Sign in',()=>openAccount());
+  if(session)action('Profile',openProfile,{id:'profile'});
   if(options.onSettings)action('Settings',openSiteSettings,{id:'settings'});
   if(options.onAbout)action('About us',openSiteAbout,{id:'about'});
   if(profile?.admin&&options.onReview)action('Review solves',options.onReview,{id:'review-solves'});
-  if(session)action(profile?.wca_connected?'WCA account':'Connect WCA account',()=>{openAccount('account');if(!profile?.wca_connected)return busy(()=>wcaOAuth(true));},{id:'connect-wca'});
-  if(session)action('Log out',async()=>{const {error}=await client.auth.signOut();if(error){const message=document.createElement('p');message.className='ft-menu-error';message.setAttribute('role','alert');message.textContent='Couldn’t log out. Please try again.';menu.append(message);open();return;}await refresh(null);},{danger:true});
+
  };render();onAccountChange(render);ready.then(render);return button;
 }
 if(client){client.auth.onAuthStateChange(event=>{if(event==='PASSWORD_RECOVERY')setTimeout(()=>openAccount('new-password'),0);});}

@@ -1,6 +1,6 @@
 -- Investigation is a private review state. New submissions cannot erase a held case.
 alter table public.submissions drop constraint submissions_status_check;
-alter table public.submissions add constraint submissions_status_check check(status in ('draft','pending','investigating','approved','rejected'));
+alter table public.submissions add constraint submissions_status_check check(status in ('draft','pending','investigating','approved','rejected','superseded'));
 alter table public.submissions add column investigation_note text not null default '' check(length(investigation_note)<=500);
 alter table public.submissions add column investigation_at timestamptz;
 alter table public.submissions add column investigation_by uuid references auth.users on delete set null;

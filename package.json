@@ -5,11 +5,22 @@
   "scripts": {
     "build:shared": "node scripts/build-shared.mjs",
     "configure": "node scripts/configure-backend.mjs",
-    "test": "node tests/static.test.mjs && node --test tests/update-subwebsites.test.mjs",
+    "test": "node tests/static.test.mjs && node --test tests/update-subwebsites.test.mjs tests/emscripten-env.test.mjs tests/wca-userinfo.test.mjs tests/merge-accounts.test.mjs",
     "preview": "python3 -m http.server 8080 --bind 127.0.0.1 --directory public",
     "test:db:wasm": "node tests/postgres-wasm.mjs",
     "test:upgrade": "node tests/recording-upgrade.mjs",
-    "test:wca": "node --test tests/wca-userinfo.test.mjs && node tests/postgres-wasm.mjs wca-accounts.test.sql"
+    "test:storage": "node tests/storage-limits.mjs",
+    "test:manual-leaderboard": "node tests/postgres-wasm.mjs manual-leaderboard.test.sql",
+    "test:notifications": "node tests/postgres-wasm.mjs notifications-evidence.test.sql",
+    "test:skipped-scrambles": "node tests/postgres-wasm.mjs skipped-scrambles.test.sql",
+    "test:pauses-and-grace": "node tests/postgres-wasm.mjs pauses-and-grace.test.sql",
+    "test:fractional-times": "node tests/postgres-wasm.mjs fractional-times.test.sql",
+    "test:admin-recovery": "node tests/postgres-wasm.mjs admin-recovery.test.sql",
+    "test:current-windows": "node tests/postgres-wasm.mjs current-submission-windows.test.sql",
+    "test:investigation-holds": "node tests/postgres-wasm.mjs investigation-holds.test.sql",
+    "test:wca": "node --test tests/wca-userinfo.test.mjs && node tests/postgres-wasm.mjs wca-accounts.test.sql",
+    "test:merging": "node --test tests/merge-accounts.test.mjs && node tests/postgres-wasm.mjs account-merging.test.sql",
+    "test:usernames": "node tests/postgres-wasm.mjs username-changes.test.sql"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.117.3",

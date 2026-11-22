@@ -8,12 +8,13 @@ await db.exec(`
 create schema auth;create schema extensions;create schema cron;
 create role anon;create role authenticated;create role service_role bypassrls;
 create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
-create table auth.identities(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users on delete cascade,provider text not null,identity_data jsonb not null,created_at timestamptz default now());
+create table auth.sessions(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users on delete cascade);create table auth.identities(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users on delete cascade,provider text not null,identity_data jsonb not null,created_at timestamptz default now());
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
 grant usage on schema auth,extensions,public to anon,authenticated,service_role;
 create function cron.schedule(text,text,text) returns bigint language sql as $$select 1::bigint$$;
 `);
-for(const file of (await readdir(root+'/supabase/migrations')).filter(f=>f.endsWith('.sql')).sort()){
+const selectedVersions=process.env.FTOERS_MIGRATION_VERSIONS?.split(',');
+for(const file of (await readdir(root+'/supabase/migrations')).filter(f=>f.endsWith('.sql')&&(!selectedVersions||selectedVersions.includes(f.slice(0,14)))).sort((a,b)=>selectedVersions?selectedVersions.indexOf(a.slice(0,14))-selectedVersions.indexOf(b.slice(0,14)):a.localeCompare(b))){
  let sql=await readFile(root+'/supabase/migrations/'+file,'utf8');sql=sql.replace('create extension if not exists pg_cron;','-- pg_cron scheduling is stubbed in WASM; production Supabase provides it.');
  try{await db.exec(sql);console.log('Applied',file);}catch(error){console.error('MIGRATION FAILED:',error.message,error.position,error.internalQuery);await db.close();process.exit(1);}
 }

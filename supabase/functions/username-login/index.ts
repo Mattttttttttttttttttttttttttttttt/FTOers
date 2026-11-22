@@ -1,7 +1,7 @@
 // Never return the email associated with a username. Supabase Auth still enforces
 // password checks; a per-IP database limiter also covers username resolution.
 import {createClient} from 'npm:@supabase/supabase-js@2';
-const allowed = new Set(['https://ftoers.web.app','https://ftoers.firebaseapp.com','http://127.0.0.1:5173','http://127.0.0.1:8080']);
+const allowed = new Set(['https://ftoers.web.app','https://ftoers.firebaseapp.com','http://127.0.0.1:5173','http://127.0.0.1:8080','http://localhost:5173','http://localhost:8080']);
 Deno.serve(async req => {
  const origin=req.headers.get('origin')??'';
  const headers={'Access-Control-Allow-Origin':allowed.has(origin)?origin:'https://ftoers.web.app','Access-Control-Allow-Headers':'apikey,content-type,authorization','Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
@@ -18,12 +18,12 @@ Deno.serve(async req => {
   const key=Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
   const {data:permitted,error:limitError}=await admin.rpc('allow_username_login',{ip_hash:key});
   if(limitError||!permitted)return fail(429);
-  const {data:profile}=await admin.from('profiles').select('id').ilike('username',username.replaceAll('_','\\_')).maybeSingle();
-  const user=profile?await admin.auth.admin.getUserById(profile.id):null;
-  const email=user?.data.user?.email??'invalid-login@invalid.example';
+  const {data:resolvedEmail,error:lookupError}=await admin.rpc('username_login_email',{name:username});
+  if(lookupError)return fail();
+  const email=resolvedEmail??'invalid-login@invalid.example';
   const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await client.auth.signInWithPassword({email,password});
-  if(error||!profile||!data.session)return fail(401);
+  if(error||!resolvedEmail||!data.session)return fail(401);
   return new Response(JSON.stringify({access_token:data.session.access_token,refresh_token:data.session.refresh_token}),{headers});
  }catch{return fail();}
 });

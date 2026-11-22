@@ -2,12 +2,25 @@ project_id = "ftoers"
 [auth]
 enable_manual_linking = true
 site_url = "https://ftoers.web.app"
-additional_redirect_urls = ["https://ftoers.web.app/", "https://ftoers.web.app/virtual/", "https://ftoers.firebaseapp.com/", "https://ftoers.firebaseapp.com/virtual/", "http://127.0.0.1:5173/", "http://127.0.0.1:8080/", "http://127.0.0.1:8080/virtual/", "http://localhost:8080/", "http://localhost:8080/virtual/", "http://localhost:5173/"]
+additional_redirect_urls = ["https://ftoers.web.app/", "https://ftoers.web.app/virtual/", "https://ftoers.firebaseapp.com/", "https://ftoers.firebaseapp.com/virtual/", "http://127.0.0.1:5173/", "http://127.0.0.1:8080/", "http://127.0.0.1:8080/virtual/", "http://localhost:8080/", "http://localhost:8080/virtual/", "http://localhost:5173/", "https://ftoers.web.app/shared/merge-callback.html", "https://ftoers.web.app/virtual/shared/merge-callback.html", "https://ftoers.firebaseapp.com/shared/merge-callback.html", "https://ftoers.firebaseapp.com/virtual/shared/merge-callback.html", "http://127.0.0.1:5173/shared/merge-callback.html", "http://localhost:5173/shared/merge-callback.html", "http://127.0.0.1:8080/shared/merge-callback.html", "http://127.0.0.1:8080/virtual/shared/merge-callback.html", "http://localhost:8080/shared/merge-callback.html", "http://localhost:8080/virtual/shared/merge-callback.html"]
 [auth.email]
 enable_signup = true
 enable_confirmations = true
 [functions.username-login]
 verify_jwt = false
 
+[auth.email.template.confirmation]
+subject = "Confirm your FTOers account"
+content_path = "./supabase/templates/confirmation.html"
+[auth.email.template.recovery]
+subject = "Reset your FTOers password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.rate_limit]
+email_sent = 30
+
 [functions.wca-userinfo]
+verify_jwt = false
+
+[functions.merge-accounts]
 verify_jwt = false

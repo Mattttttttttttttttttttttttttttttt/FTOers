@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-export const sharedFiles=['account.js','account.css','config.js','supabase.js','SUPABASE-LICENSE','wca.svg'];
+export const sharedFiles=['account.js','account.css','config.js','supabase.js','SUPABASE-LICENSE','wca.svg','profile.js','merge-callback.html','merge-callback.js'];
 const canonical=fileURLToPath(new URL('../public/shared/',import.meta.url));
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 async function optional(file){try{return await readFile(file);}catch(error){if(error.code==='ENOENT')return null;throw error;}}

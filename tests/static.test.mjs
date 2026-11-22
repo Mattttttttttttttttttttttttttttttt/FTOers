@@ -12,7 +12,7 @@ for(const page of ['index.html','privacy/index.html','terms/index.html']){
   await access(resolve(root,'public',url.replace(/^\//,'')));
  }
 }
-for(const file of ['home.js','shared/account.js','shared/config.js']){
+for(const file of ['home.js','shared/account.js','shared/config.js','shared/profile.js','shared/merge-callback.js']){
  const result=spawnSync(process.execPath,['--check',resolve(root,'public',file)],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);
 }
 const config=await import('../public/shared/config.js');
