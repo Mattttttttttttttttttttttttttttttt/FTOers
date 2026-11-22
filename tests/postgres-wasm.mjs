@@ -8,6 +8,7 @@ await db.exec(`
 create schema auth;create schema extensions;create schema cron;
 create role anon;create role authenticated;create role service_role bypassrls;
 create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+create table auth.identities(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users on delete cascade,provider text not null,identity_data jsonb not null,created_at timestamptz default now());
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
 grant usage on schema auth,extensions,public to anon,authenticated,service_role;
 create function cron.schedule(text,text,text) returns bigint language sql as $$select 1::bigint$$;

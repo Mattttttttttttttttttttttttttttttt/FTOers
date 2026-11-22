@@ -8,7 +8,8 @@
     "test": "node tests/static.test.mjs && node --test tests/update-subwebsites.test.mjs",
     "preview": "python3 -m http.server 8080 --bind 127.0.0.1 --directory public",
     "test:db:wasm": "node tests/postgres-wasm.mjs",
-    "test:upgrade": "node tests/recording-upgrade.mjs"
+    "test:upgrade": "node tests/recording-upgrade.mjs",
+    "test:wca": "node --test tests/wca-userinfo.test.mjs && node tests/postgres-wasm.mjs wca-accounts.test.sql"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.117.3",

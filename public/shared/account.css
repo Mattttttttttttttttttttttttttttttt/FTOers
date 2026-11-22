@@ -2,3 +2,51 @@
 :root{--ft-bg:#172231;--ft-input:#0f1824;--ft-border:#34445c;--ft-text:#edf1fb;--ft-muted:#a7b7cd;--ft-accent:#a6b9fc;--ft-accent-text:#16203c;--ft-hover:#24334a}
 .ft-avatar-trigger{display:grid!important;place-items:center!important;border:1px solid var(--ft-border)!important;border-radius:50%!important;background:var(--ft-input)!important;color:var(--ft-text)!important;padding:3px!important;width:38px!important;height:38px!important;min-width:38px!important;cursor:pointer;flex-shrink:0}.ft-avatar{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;overflow:hidden;color:var(--ft-accent);background:var(--ft-hover);font:650 16px/1 system-ui,sans-serif}.ft-avatar img{width:100%;height:100%;object-fit:cover}.ft-avatar svg{width:21px!important;height:21px!important;fill:none;stroke:currentColor;stroke-width:1.6}.ft-menu{position:fixed;inset:auto;margin:0;width:230px;max-width:calc(100vw - 24px);background:var(--ft-bg);color:var(--ft-text);border:1px solid var(--ft-border);border-radius:14px;padding:7px;box-shadow:0 16px 50px #0006;font:15px/1.4 system-ui,sans-serif}.ft-menu:popover-open{display:block}.ft-menu::backdrop{background:transparent}.ft-menu button{display:block;width:100%;text-align:left;padding:11px 12px;background:none;border:0;border-radius:8px;color:inherit;font:inherit;cursor:pointer}.ft-menu button:hover,.ft-menu button:focus-visible{background:var(--ft-hover)}.ft-menu .ft-menu-danger{color:#f1a9ad;border-top:1px solid var(--ft-border);border-radius:0;margin-top:5px;padding-top:13px}.ft-menu-identity{padding:10px 12px 13px;margin-bottom:4px;border-bottom:1px solid var(--ft-border);overflow-wrap:anywhere}.ft-menu-identity strong{font-weight:600}.ft-dialog{box-sizing:border-box;background:var(--ft-bg);color:var(--ft-text);border:1px solid var(--ft-border);border-radius:18px;padding:26px;width:min(430px,calc(100vw - 28px));max-height:90dvh;overflow:auto;font:16px/1.5 system-ui,sans-serif}.ft-dialog::backdrop{background:#050a13b0;backdrop-filter:blur(7px)}.ft-dialog *{box-sizing:border-box}.ft-dialog h2{font-size:24px;letter-spacing:-.6px;margin:0;font-weight:650}.ft-dialog header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.ft-dialog label{display:block;margin:16px 0 0;font-size:14px;color:var(--ft-muted)}.ft-dialog input{display:block;background:var(--ft-input);color:var(--ft-text);border:1px solid var(--ft-border);padding:12px;border-radius:9px;width:100%;font:inherit;margin-top:7px}.ft-dialog small{display:block;font-size:12px;margin-top:5px}.ft-dialog button{font:inherit;border:1px solid var(--ft-border);border-radius:9px;color:var(--ft-text);background:var(--ft-hover);padding:11px 14px;cursor:pointer}.ft-dialog button:disabled{opacity:.5;cursor:wait}.ft-dialog .ft-submit{background:var(--ft-accent);color:var(--ft-accent-text);width:100%;margin-top:24px;border:0;font-weight:650}.ft-dialog .ft-google{width:100%;margin-top:12px;background:transparent}.ft-dialog .ft-switch{background:none;border:0;padding:12px 0 0;color:var(--ft-accent);font-size:14px;margin-right:18px}.ft-dialog p{font-size:14px;color:var(--ft-muted)}.ft-dialog [role=status]{min-height:0;overflow-wrap:anywhere}.ft-dialog [role=status]:empty{display:none}.ft-dialog [hidden]{display:none!important}.ft-dialog a{color:var(--ft-accent)}.ft-dialog .ft-close{display:grid;place-items:center;padding:0;width:30px;height:30px;font-size:22px;background:transparent;border:0;color:var(--ft-muted)}.ft-dialog :focus-visible,.ft-avatar-trigger:focus-visible{outline:2px solid var(--ft-accent);outline-offset:3px}.ft-profile-summary{display:flex;align-items:center;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--ft-border)}.ft-profile-summary>.ft-avatar{width:46px;height:46px;flex-shrink:0}.ft-profile-summary strong{font-size:17px}.ft-profile-summary p{margin:3px 0 0;overflow-wrap:anywhere}.ft-dialog .ft-setting-row{display:flex;justify-content:space-between;align-items:center;gap:15px;color:var(--ft-text)}.ft-dialog .ft-setting-row input{width:18px;height:18px;accent-color:var(--ft-accent);margin:0}.ft-setting-row small{color:var(--ft-muted)}.ft-reduce-motion *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 .ft-menu-error{padding:0 12px;color:#f1a9ad;font-size:13px}
+
+/* Account forms share a layout; each site supplies its own palette. */
+dialog.ft-auth{width:min(420px,calc(100vw - 32px));padding:28px;border-radius:18px;font:15px/1.5 system-ui,sans-serif;box-shadow:0 24px 90px #0005}
+dialog.ft-auth header{margin:0 0 24px;gap:20px;align-items:center}
+dialog.ft-auth h2{font-size:25px;font-weight:650;line-height:1.25;letter-spacing:-.5px}
+dialog.ft-auth .ft-close{width:32px;height:32px;min-height:0;border:1px solid var(--ft-border);border-radius:9px;font-size:22px;line-height:1;flex-shrink:0}
+dialog.ft-auth .ft-description{font-size:14px;line-height:1.6;margin:-8px 0 24px;color:var(--ft-muted)}
+dialog.ft-auth form{display:grid;gap:18px;margin:0}
+dialog.ft-auth label{margin:0;font-size:14px;font-weight:500;color:var(--ft-text)}
+dialog.ft-auth input{height:46px;padding:10px 12px;margin:8px 0 0;font:16px/1.4 system-ui,sans-serif;border-radius:9px;box-shadow:none}
+dialog.ft-auth input:hover{border-color:var(--ft-muted)}
+dialog.ft-auth small{font-size:12px;font-weight:400;line-height:1.5;color:var(--ft-muted);margin:6px 0 0}
+dialog.ft-auth button{min-height:44px;font-size:14px;font-weight:550;line-height:1.35;transition:background .12s,border-color .12s}
+dialog.ft-auth .ft-google{display:flex;align-items:center;justify-content:center;gap:12px;margin:0;height:46px;background:var(--ft-input);border-color:var(--ft-border)}
+dialog.ft-auth .ft-google svg{width:19px;height:19px;flex-shrink:0}
+dialog.ft-auth .ft-google:hover{background:var(--ft-hover)}
+.ft-divider{display:flex;align-items:center;gap:14px;color:var(--ft-muted);font-size:12px;margin:21px 0}
+.ft-divider::before,.ft-divider::after{content:'';height:1px;background:var(--ft-border);flex:1;opacity:.7}
+.ft-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+dialog.ft-auth [data-reset]{min-height:0;padding:0;background:none;border:0;color:var(--ft-muted);font-size:12px;font-weight:400}
+dialog.ft-auth [data-reset]:hover{color:var(--ft-accent);text-decoration:underline;text-underline-offset:3px}
+dialog.ft-auth .ft-submit{margin:5px 0 0;height:46px;border-radius:9px;font-size:15px;font-weight:650}
+dialog.ft-auth .ft-submit:hover{filter:brightness(1.06)}
+.ft-auth-footer{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:5px 8px;border-top:1px solid var(--ft-border);padding-top:18px;margin-top:24px;color:var(--ft-muted);font-size:13px}
+dialog.ft-auth .ft-auth-footer button{padding:0;min-height:30px;margin:0;border:0;background:none;color:var(--ft-accent);font-size:13px;font-weight:550}
+dialog.ft-auth .ft-auth-footer button:hover{text-decoration:underline;text-underline-offset:3px}
+dialog.ft-auth .ft-notice:not(:empty){border:1px solid var(--ft-border);border-radius:9px;padding:12px 14px;margin:18px 0 0;font-size:14px;line-height:1.55}
+dialog.ft-auth[data-state=error] .ft-notice{color:#f4b4b7;border-color:#805055;background:#a43c4810}
+dialog.ft-auth[data-state=success] .ft-notice{color:var(--ft-text);background:var(--ft-input);margin:0}
+dialog.ft-auth button:disabled{opacity:.55}
+@media(max-width:400px){dialog.ft-auth{padding:22px}.ft-label-row{gap:8px}dialog.ft-auth h2{font-size:23px}}
+
+.ft-password-control{position:relative;margin-top:8px}
+dialog.ft-auth .ft-password-control input{margin-top:0;padding-right:52px}
+dialog.ft-auth .ft-password-toggle{position:absolute;top:1px;right:2px;display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:11px;border:0;border-radius:8px;background:transparent;color:var(--ft-muted)}
+dialog.ft-auth .ft-password-toggle:hover{background:var(--ft-hover);color:var(--ft-text)}
+.ft-password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+dialog.ft-auth #ft-password-mismatch{color:#f4b4b7}
+
+dialog.ft-auth input[name=code]{height:54px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:23px;letter-spacing:.16em;text-align:center}
+dialog.ft-auth input[name=code]::placeholder{font-family:system-ui,sans-serif;font-size:14px;letter-spacing:normal}
+
+/* OAuth actions follow each surface's existing account palette. */
+dialog.ft-auth .ft-wca{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:46px;margin-top:10px;background:var(--ft-input);border-color:var(--ft-border)}
+dialog.ft-auth .ft-wca:hover{background:var(--ft-hover)}
+dialog.ft-auth .ft-wca img{width:20px;height:20px;object-fit:contain}
+dialog.ft-auth .ft-optional{color:var(--ft-muted);font-size:12px;font-weight:400}
+dialog.ft-auth [data-wca-details]{margin:0;padding:14px;border:1px solid var(--ft-border);border-radius:9px;overflow-wrap:anywhere}

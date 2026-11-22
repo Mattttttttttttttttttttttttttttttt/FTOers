@@ -1,9 +1,13 @@
 project_id = "ftoers"
 [auth]
+enable_manual_linking = true
 site_url = "https://ftoers.web.app"
 additional_redirect_urls = ["https://ftoers.web.app/", "https://ftoers.web.app/virtual/", "https://ftoers.firebaseapp.com/", "https://ftoers.firebaseapp.com/virtual/", "http://127.0.0.1:5173/", "http://127.0.0.1:8080/", "http://127.0.0.1:8080/virtual/", "http://localhost:8080/", "http://localhost:8080/virtual/", "http://localhost:5173/"]
 [auth.email]
 enable_signup = true
 enable_confirmations = true
 [functions.username-login]
+verify_jwt = false
+
+[functions.wca-userinfo]
 verify_jwt = false
