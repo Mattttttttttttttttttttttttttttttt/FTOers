@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {emscriptenEnv} from '../scripts/emscripten-env.mjs';
+async function fixture(t){const home=await mkdtemp(join(tmpdir(),'ftoers-sdk-'));t.after(()=>rm(home,{recursive:true,force:true}));const env={...process.env,HOME:home,XDG_DATA_HOME:join(home,'data'),EMSDK:'',FTOERS_EMSDK_ENV:'',PATH:'/usr/bin:/bin'};return {home,env};}
+async function sdk(root,version){await mkdir(join(root,'bin'),{recursive:true});await writeFile(join(root,'bin/emcc'),`#!/bin/sh\necho 'emcc (Emscripten gcc/clang-like replacement) ${version}'\n`,{mode:0o755});const file=join(root,'emsdk_env.sh');await writeFile(file,`export PATH='${root}/bin':"$PATH"\nexport EMSDK='${root}'\nexport FTOERS_TEST_SDK='loaded'\n`);return file;}
+test('discovers a matching SDK without changing the parent environment',async t=>{const {env}=await fixture(t);await sdk(join(env.XDG_DATA_HOME,'ftoers/emsdk'),'4.0.20');const result=await emscriptenEnv('4.0.20',{env});assert.equal(result.FTOERS_TEST_SDK,'loaded');assert.equal(env.FTOERS_TEST_SDK,undefined);assert.equal(env.PATH,'/usr/bin:/bin');});
+test('preserves a matching PATH SDK and skips an incompatible activated SDK',async t=>{const {env,home}=await fixture(t);await sdk(join(home,'other'),'6.0.3');env.EMSDK=join(home,'other');const file=await sdk(join(env.XDG_DATA_HOME,'ftoers/emsdk'),'4.0.20');const result=await emscriptenEnv('4.0.20',{env});assert.equal(result.EMSDK,join(env.XDG_DATA_HOME,'ftoers/emsdk'));const inherited={...env,PATH:join(env.XDG_DATA_HOME,'ftoers/emsdk/bin')+':'+env.PATH};assert.equal(await emscriptenEnv('4.0.20',{env:inherited}),inherited);});
+test('explicit SDK paths with spaces work; incompatible/missing SDKs fail clearly',async t=>{const {env,home}=await fixture(t);env.FTOERS_EMSDK_ENV=await sdk(join(home,'custom sdk'),'4.0.20');assert.equal((await emscriptenEnv('4.0.20',{env})).EMSDK,join(home,'custom sdk'));env.FTOERS_EMSDK_ENV=await sdk(join(home,'wrong'),'6.0.3');await assert.rejects(emscriptenEnv('4.0.20',{env}),/Emscripten 4.0.20 is required/);env.FTOERS_EMSDK_ENV=join(home,'absent/emsdk_env.sh');await assert.rejects(emscriptenEnv('4.0.20',{env}),/FTOERS_EMSDK_ENV=/);});

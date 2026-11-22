@@ -13,7 +13,8 @@
       "web/index.html",
       "web/wasm/fto-web.js",
       "web/wasm/fto_web.wasm"
-    ]
+    ],
+    "emscripten": "4.0.20"
   },
   "virtual": {
     "path": "./virtual",

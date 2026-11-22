@@ -21,8 +21,9 @@ if('${name}'==='npm'&&process.argv[2]==='run'){fs.mkdirSync('dist',{recursive:tr
  await writeFile(join(root,'submodules/finder/build.sh'),'#!/usr/bin/env bash\nset -e\nmkdir -p ../public/web/wasm\necho landing > ../public/index.html\necho web > ../public/web/index.html\necho wasm > ../public/web/wasm/fto_web.wasm\n');
  await writeFile(join(root,'submodules.json'),JSON.stringify(config));
  const log=join(root,'commands.log');
- const run=(...args)=>spawnSync('bash',[join(root,'update-subwebsites.sh'),...args],{cwd:tmpdir(),encoding:'utf8',env:{...process.env,PATH:join(root,'bin')+':'+process.env.PATH,TEST_LOG:log}});
- return {root,run,config,log,save:()=>writeFile(join(root,'submodules.json'),JSON.stringify(config))};
+ const environment={...process.env,PATH:join(root,'bin')+':'+process.env.PATH,TEST_LOG:log};
+ const run=(...args)=>spawnSync('bash',[join(root,'update-subwebsites.sh'),...args],{cwd:tmpdir(),encoding:'utf8',env:environment});
+ return {root,run,config,log,environment,save:()=>writeFile(join(root,'submodules.json'),JSON.stringify(config))};
 }
 test('locked update builds nested web output and standalone account copies, from another cwd',async t=>{
  const f=await fixture(t),result=f.run('--lock');assert.equal(result.status,0,result.stderr);
@@ -65,4 +66,17 @@ test('legacy Node build scripts receive arguments and can rebuild their real out
  let result=f.run('--lock','virtual');assert.equal(result.status,0,result.stderr);assert.equal(await readFile(join(f.root,'public/legacy/index.html'),'utf8'),'--small');
  result=f.run('--lock','virtual');assert.equal(result.status,0,result.stderr);
  f.config.legacy.updating=false;await f.save();result=f.run('--plan');assert.match(result.stdout,/Git update: finder, virtual/);
+});
+
+test('SDK environment reaches the configured build; an unavailable SDK fails before npm installs',async t=>{
+ const f=await fixture(t);f.config.finder.emscripten='4.0.20';await f.save();
+ f.environment.FTOERS_EMSDK_ENV=join(f.root,'missing/emsdk_env.sh');
+ assert.equal(f.run('--lock','finder','--plan').status,0);
+ let result=f.run('--lock','finder');assert.notEqual(result.status,0);assert.match(result.stderr,/Emscripten 4.0.20 is required/);assert.equal(await lstat(f.log).catch(()=>null),null);
+ const sdk=join(f.root,'custom sdk');await mkdir(join(sdk,'bin'),{recursive:true});
+ await writeFile(join(sdk,'bin/emcc'),"#!/bin/sh\necho 'emcc 4.0.20'\n",{mode:0o755});
+ f.environment.FTOERS_EMSDK_ENV=join(sdk,'emsdk_env.sh');
+ await writeFile(f.environment.FTOERS_EMSDK_ENV,`export PATH='${sdk}/bin':"$PATH"\nexport FTOERS_SDK_MARKER=found\n`);
+ await writeFile(join(f.root,'submodules/finder/build.sh'),'#!/usr/bin/env bash\nset -eu\n[ "$FTOERS_SDK_MARKER" = found ]\nemcc --version\nmkdir -p ../public/web/wasm\necho landing > ../public/index.html\necho web > ../public/web/index.html\necho wasm > ../public/web/wasm/fto_web.wasm\n');
+ result=f.run('--lock','finder');assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/\[sdk\] Emscripten 4.0.20/);assert.equal(await readFile(join(f.root,'public/finder/web/wasm/fto_web.wasm'),'utf8'),'wasm\n');
 });

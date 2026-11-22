@@ -2,6 +2,7 @@ import {readFile,mkdir,lstat,symlink,rename,unlink} from 'node:fs/promises';
 import {resolve,relative,dirname,isAbsolute,sep,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
+import {emscriptenEnv} from './emscripten-env.mjs';
 import {syncShared} from './sync-shared.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -20,6 +21,7 @@ submodules.json leaves:
   updating: false skips builds/mounts and default Git updates for that root.
   build: true installs npm dependencies and builds path (default: npm run build).
   command: optional command argument array replacing npm run build.
+  emscripten: optional SDK version, loaded automatically for this build.
   output: build output relative to path (default: dist).
   required: files required in output (default: index.html).
   shared: optional consumer directory relative to path for checked-in account files.`;
@@ -34,6 +36,7 @@ function flatten(value,prefix=''){
   if(typeof value.build!=='undefined'&&typeof value.build!=='boolean')throw Error(`build must be boolean: ${prefix}`);
   if(typeof value.updating!=='undefined'&&typeof value.updating!=='boolean')throw Error(`updating must be boolean: ${prefix}`);
   if(value.command&&(!Array.isArray(value.command)||!value.command.length||value.command.some(x=>typeof x!=='string'||!x)))throw Error(`Invalid command: ${prefix}`);
+  if(value.emscripten!==undefined&&(!value.build||typeof value.emscripten!=='string'||!/^\d+\.\d+\.\d+$/.test(value.emscripten)))throw Error(`Invalid Emscripten version: ${prefix}`);
   const output=value.build?inside(repo,relative(repo,resolve(sourceDir,value.output??'dist')),'Build output'):sourceDir;
   const shared=value.shared?inside(repo,relative(repo,resolve(sourceDir,value.shared)),'Shared destination'):null;
   const required=value.required??['index.html'];if(!Array.isArray(required)||required.some(x=>typeof x!=='string'))throw Error(`Invalid required files: ${prefix}`);
@@ -66,7 +69,7 @@ async function main(){
  const updates=[...new Set(chosen.map(e=>e.id))].filter(id=>!allLocked&&!locked.has(id)&&(selected.has(id)||!entries.some(e=>e.id===id&&!e.legacy&&!e.updating)));
  if(plan){
   console.log(`Git update: ${updates.join(', ')||'(none)'}`);
-  for(const e of chosen)console.log(e.updating?`public/${e.prefix}: ${e.shared?'sync accounts; ':''}${e.build?JSON.stringify(e.command??['npm','run','build'])+'; ':''}mount ${relative(root,e.output)}; require ${e.required.join(', ')}`:`public/${e.prefix}: skip (updating: false)`);
+  for(const e of chosen)console.log(e.updating?`public/${e.prefix}: ${e.shared?'sync accounts; ':''}${e.emscripten?'Emscripten '+e.emscripten+'; ':''}${e.build?JSON.stringify(e.command??['npm','run','build'])+'; ':''}mount ${relative(root,e.output)}; require ${e.required.join(', ')}`:`public/${e.prefix}: skip (updating: false)`);
   return;
  }
  if(updates.length)run(['git','submodule','update','--init','--remote','--merge','--recursive','--',...updates.map(id=>'submodules/'+id)],root);
@@ -75,10 +78,11 @@ async function main(){
   // Validate the mount before doing expensive work or touching consumer copies.
   const source=await stat(e.sourceDir);if(!source)throw Error(`Source missing: ${e.sourceDir}. Initialize/update the submodule first.`);
   const old=await stat(e.mount);if(old&&!old.isSymbolicLink()&&(e.build||!source.isFile()))throw Error(`Refusing to replace a real file/directory: ${e.mount}`);
+  const buildEnv=e.emscripten?await emscriptenEnv(e.emscripten):{};
   if(e.shared)await syncShared(e.shared);
   if(e.build){
-   if(!skipInstall){const lock=await stat(resolve(e.sourceDir,'package-lock.json'))??await stat(resolve(e.sourceDir,'npm-shrinkwrap.json'));run(['npm',lock?'ci':'install','--include=dev'],e.sourceDir);}
-   run(e.command??['npm','run','build'],e.sourceDir);
+   if(!skipInstall){const lock=await stat(resolve(e.sourceDir,'package-lock.json'))??await stat(resolve(e.sourceDir,'npm-shrinkwrap.json'));run(['npm',lock?'ci':'install','--include=dev'],e.sourceDir,buildEnv);}
+   run(e.command??['npm','run','build'],e.sourceDir,buildEnv);
   }else if(source.isFile()){
    // Legacy Node scripts own BUILD_OUT_DIR; do not point them through an old link.
    if(old?.isSymbolicLink())await unlink(e.mount);await mkdir(dirname(e.mount),{recursive:true});
