@@ -6,9 +6,9 @@ export let profile=null;
 export let session=null;
 const changes=new EventTarget();
 export const onAccountChange=fn=>{changes.addEventListener('change',fn);return()=>changes.removeEventListener('change',fn);};
-export async function rpc(name,args={}){
+export async function rpc(name,args={}, {signal}={}){
  if(!client)throw Error('FTOers accounts are not configured yet.');
- const {data,error}=await client.rpc(name,args);if(error)throw Error(error.message);return data;
+ const request=client.rpc(name,args);const {data,error}=await(signal?request.abortSignal(signal):request);if(error)throw Error(error.message);return data;
 }
 let revision=0;
 async function refresh(next){

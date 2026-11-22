@@ -1,0 +1,35 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select no_plan();
+-- Production jsonb float serialization rounds some high-resolution JS times.
+set local extra_float_digits=0;
+insert into auth.users(id,email,email_confirmed_at) values('11111111-1111-4111-8111-111111111111','fractions@example.invalid',now());
+insert into public.profiles(id,username) values('11111111-1111-4111-8111-111111111111','FractionTester');
+create temp table results(name text primary key,result jsonb);grant all on results to authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+-- Pass raw recording JSON, retaining JS precision rather than first going through float8 output.
+insert into results values('ticket',jsonb_build_object('id',public.begin_attempt('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')));
+update public.attempts set started_at=clock_timestamp()-interval '60 seconds' where id=(select (result->>'id')::uuid from results where name='ticket');
+insert into results values('fractional',public.record_online_attempt((select (result->>'id')::uuid from results where name='ticket'),'{"format":"fto-replay-v1","size":3,"complete":true,"solveMs":22400.40000000596,"events":[]}'));
+select is((select (result->>'dnf')::boolean from results where name='fractional'),false,'The real fractional 22.40 solve is a valid online attempt');
+select is((select jsonb_array_length(result->'candidates') from results where name='fractional'),1,'Fractional JS timing must produce a submit-ready single');
+set local role authenticated;
+select is((select count(*)::int from jsonb_array_elements(public.my_leaderboard_candidates()) e where e->>'metric'='single'),1,'Fractional single remains submit-ready after loading candidates again');
+select lives_ok($$select public.submit_leaderboard((select (result->'candidates'->0->>'id')::uuid from results where name='fractional'))$$,'Fractional single can be submitted even with rounded JSON evidence');
+set local role postgres;
+select public.record_online_attempt(public.begin_attempt('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),'{"format":"fto-replay-v1","size":3,"complete":true,"solveMs":100.10000000000001,"events":[]}') from generate_series(1,4);
+select is((select count(*)::int from jsonb_array_elements(public.my_leaderboard_candidates()) e where e->>'metric'='ao5'),1,'Fractional member timings also permit an ao5 candidate');
+select public.record_online_attempt(public.begin_attempt('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),'{"format":"fto-replay-v1","size":3,"complete":true,"solveMs":110.19999999999999,"events":[]}') from generate_series(1,7);
+select is((select count(*)::int from jsonb_array_elements(public.my_leaderboard_candidates()) e where e->>'metric'='ao12'),1,'Fractional member timings also permit an ao12 candidate');
+create temp table evidence as select evidence_refs from public.submissions where metric='single' and status='pending';
+select is(public.leaderboard_evidence_available((select evidence_refs from evidence),'single'),true,'Trusted original fractional evidence is accepted');
+select is(public.leaderboard_evidence_available((select jsonb_set(evidence_refs,'{0,ms}','22400.401'::jsonb) from evidence),'single'),false,'A real time alteration is still rejected');
+select is(public.leaderboard_evidence_available((select jsonb_set(evidence_refs,'{0,recording_hash}','"missing"'::jsonb) from evidence),'single'),false,'Missing recording evidence is still rejected');
+create temp table original_payload as select hash,payload from public.recording_objects where hash=(select evidence_refs->0->>'recording_hash' from evidence);
+update public.recording_objects set payload=payload-'solveMs' where hash=(select hash from original_payload);
+select is(public.leaderboard_evidence_available((select evidence_refs from evidence),'single'),false,'A missing replay duration cannot pass through a NULL comparison');
+update public.recording_objects o set payload=p.payload from original_payload p where o.hash=p.hash;
+update public.recording_objects set payload=jsonb_set(payload,'{usedPause}','true') where hash=(select evidence_refs->0->>'recording_hash' from evidence);
+select is(public.leaderboard_evidence_available((select evidence_refs from evidence),'single'),false,'Precision tolerance does not bypass pause disqualification');
+select * from finish();rollback;
