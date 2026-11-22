@@ -1,10 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,cp,writeFile,readFile,readlink,rm,lstat} from 'node:fs/promises';
+import {mkdtemp,mkdir,cp,writeFile,readFile,readlink,rm,lstat,readdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {syncShared,sharedFiles} from '../scripts/sync-shared.mjs';
+import {syncShared,sharedFiles,prepareSharedUpdate} from '../scripts/sync-shared.mjs';
 
 async function fixture(t){
  const root=await mkdtemp(join(tmpdir(),'ftoers-update-'));t.after(()=>rm(root,{recursive:true,force:true}));
@@ -79,4 +79,28 @@ test('SDK environment reaches the configured build; an unavailable SDK fails bef
  await writeFile(f.environment.FTOERS_EMSDK_ENV,`export PATH='${sdk}/bin':"$PATH"\nexport FTOERS_SDK_MARKER=found\n`);
  await writeFile(join(f.root,'submodules/finder/build.sh'),'#!/usr/bin/env bash\nset -eu\n[ "$FTOERS_SDK_MARKER" = found ]\nemcc --version\nmkdir -p ../public/web/wasm\necho landing > ../public/index.html\necho web > ../public/web/index.html\necho wasm > ../public/web/wasm/fto_web.wasm\n');
  result=f.run('--lock','finder');assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/\[sdk\] Emscripten 4.0.20/);assert.equal(await readFile(join(f.root,'public/finder/web/wasm/fto_web.wasm'),'utf8'),'wasm\n');
+});
+
+
+test('Git updates preserve generated shared copies but refuse hand edits and staged changes',async t=>{
+ const root=await mkdtemp(join(tmpdir(),'ftoers-shared-git-'));t.after(()=>rm(root,{recursive:true,force:true}));
+ const repo=join(root,'consumer'),target=join(repo,'public/shared'),source=join(root,'source');
+ await mkdir(repo);await cp(new URL('../public/shared/',import.meta.url),source,{recursive:true});
+ const git=(...args)=>{const r=spawnSync('git',args,{cwd:repo,encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout;};
+ git('init','-q');git('config','user.email','fixture@example.test');git('config','user.name','Fixture');
+ await syncShared(target,{source});git('add','.');git('commit','-qm','Initial shared copies');
+ const original=await readFile(join(target,'account.css'),'utf8');
+ await writeFile(join(source,'account.css'),original+'\n/* Canonical update */\n');await syncShared(target,{source});
+ await writeFile(join(repo,'keep.txt'),'Unrelated work');
+ await prepareSharedUpdate(repo,target,{source});
+ assert.equal(await readFile(join(target,'account.css'),'utf8'),original);
+ assert.equal(git('diff','--name-only'),'');assert.equal(await readFile(join(repo,'keep.txt'),'utf8'),'Unrelated work');
+ const backups=await readdir(join(repo,'.git/ftoers-shared-backups'));
+ assert.equal(backups.length,1);assert.match(await readFile(join(repo,'.git/ftoers-shared-backups',backups[0],'public/shared/account.css'),'utf8'),/Canonical update/);
+ // The normal post-merge sync restores the canonical copy.
+ await syncShared(target,{source});assert.match(await readFile(join(target,'account.css'),'utf8'),/Canonical update/);
+ await writeFile(join(target,'profile.js'),'Independent developer edit');
+ await assert.rejects(prepareSharedUpdate(repo,target,{source}),/overwrite local edits/);
+ assert.equal(await readFile(join(target,'profile.js'),'utf8'),'Independent developer edit');
+ git('add','public/shared/profile.js');await assert.rejects(prepareSharedUpdate(repo,target,{source}),/Commit or unstage/);
 });

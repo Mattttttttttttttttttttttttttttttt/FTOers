@@ -3,7 +3,7 @@ import {resolve,relative,dirname,isAbsolute,sep,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {emscriptenEnv} from './emscripten-env.mjs';
-import {syncShared} from './sync-shared.mjs';
+import {syncShared,prepareSharedUpdate} from './sync-shared.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const submodules=resolve(root,'submodules'),publicDir=resolve(root,'public');
@@ -14,6 +14,8 @@ const usage=`Usage: update-subwebsites.sh [id ...] [--lock [id ...]] [--plan] [-
   --lock with no ids: build all sites without fetching/merging.
   --plan: show the selected Git, shared sync, build and mount actions; change nothing.
   --skip-install: reuse existing npm dependencies instead of npm ci/install.
+  Generated shared copies are backed up inside the submodule Git directory before updates.
+  Hand edits and staged shared changes are never cleared automatically.
   Never deploys, stages, commits or pushes. Requires Node 20.19+, Git and npm.
 
 submodules.json leaves:
@@ -72,6 +74,7 @@ async function main(){
   for(const e of chosen)console.log(e.updating?`public/${e.prefix}: ${e.shared?'sync accounts; ':''}${e.emscripten?'Emscripten '+e.emscripten+'; ':''}${e.build?JSON.stringify(e.command??['npm','run','build'])+'; ':''}mount ${relative(root,e.output)}; require ${e.required.join(', ')}`:`public/${e.prefix}: skip (updating: false)`);
   return;
  }
+ for(const e of chosen)if(updates.includes(e.id)&&e.shared&&await stat(e.shared))await prepareSharedUpdate(e.repo,e.shared);
  if(updates.length)run(['git','submodule','update','--init','--remote','--merge','--recursive','--',...updates.map(id=>'submodules/'+id)],root);
  for(const e of chosen){
   if(!e.updating){console.log(`  [skip] public/${e.prefix} — updating: false`);continue;}
