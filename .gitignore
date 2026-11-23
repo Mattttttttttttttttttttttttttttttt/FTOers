@@ -71,6 +71,7 @@ node_modules/
 # Track the homepage and shared backend client; generated subwebsite mounts stay ignored.
 public/virtual
 public/fto-alg-finder
+public/FB
 supabase/.temp/
 supabase/.branches/
 

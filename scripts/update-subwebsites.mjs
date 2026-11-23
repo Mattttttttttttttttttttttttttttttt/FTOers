@@ -7,9 +7,11 @@ import {syncShared,prepareSharedUpdate} from './sync-shared.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const submodules=resolve(root,'submodules'),publicDir=resolve(root,'public');
-const usage=`Usage: update-subwebsites.sh [id ...] [--lock [id ...]] [--plan] [--skip-install]
+const usage=`Usage: update-subwebsites.sh [--site ... | id ...] [--lock [id ...]] [--plan] [--skip-install]
   No ids: process all configured sites, respecting updating: false.
-  ids: select those submodule roots (case-insensitive); force their Git update.
+  --site or ids: select only those submodule roots (case-insensitive); force their Git update.
+  Example: ./update-subwebsites.sh --virtual --FB
+  Unselected sites are not fetched, built, synced or mounted; their SDKs are not loaded.
   --lock ids: select these roots but never fetch/merge them; build normally.
   --lock with no ids: build all sites without fetching/merging.
   --plan: show the selected Git, shared sync, build and mount actions; change nothing.
@@ -64,7 +66,7 @@ async function main(){
  const selected=new Set(),locked=new Set();let afterLock=false,allLocked=false,plan=false,skipInstall=false;
  for(const arg of argv){
   if(arg==='--plan'){plan=true;continue;}if(arg==='--skip-install'){skipInstall=true;continue;}if(arg==='--lock'){afterLock=true;allLocked=true;continue;}
-  const id=ids.get(arg.toLowerCase());if(!id)throw Error(`Unknown submodule id or option: ${arg}. Valid ids: ${[...ids.values()].join(', ')}`);
+  const id=ids.get((arg.startsWith('--')?arg.slice(2):arg).toLowerCase());if(!id)throw Error(`Unknown submodule id or option: ${arg}. Valid ids: ${[...ids.values()].join(', ')}`);
   selected.add(id);if(afterLock){locked.add(id);allLocked=false;}
  }
  const chosen=entries.filter(e=>!selected.size||selected.has(e.id));

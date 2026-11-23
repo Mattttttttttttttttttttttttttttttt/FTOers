@@ -147,7 +147,7 @@ section[id] {
 
 .site-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px
 }
 
@@ -176,6 +176,19 @@ section[id] {
 
 .finder:hover {
     border-color: #a6b9fc
+}
+
+.fb {
+    background: #20291f;
+    border-color: #46553e
+}
+
+.fb:hover {
+    border-color: #acd982
+}
+
+.fb .card-icon {
+    color: #acd982
 }
 
 .card-top {

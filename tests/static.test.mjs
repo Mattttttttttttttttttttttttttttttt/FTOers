@@ -8,7 +8,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 for(const page of ['index.html','privacy/index.html','terms/index.html']){
  const html=await readFile(resolve(root,'public',page),'utf8');
  for(const [,url] of html.matchAll(/(?:src|href)="([^"#]+)"/g)){
-  if(/^(https?:|mailto:)/.test(url)||['/','/virtual/','/fto-alg-finder/'].includes(url))continue;
+  if(/^(https?:|mailto:)/.test(url)||['/','/virtual/','/fto-alg-finder/','/FB/'].includes(url))continue;
   await access(resolve(root,'public',url.replace(/^\//,'')));
  }
 }

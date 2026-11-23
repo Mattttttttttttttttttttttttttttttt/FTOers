@@ -4,7 +4,7 @@ Firebase Hosting serves the homepage and subwebsites from one origin. One Supaba
 
 ## First production deployment — 20 November 2026
 
-**The owner lifted the deployment hold and authorized the first release on 20 November 2026.** Production is https://ftoers.web.app, with the simulator at `/virtual/` and algorithm finder browser build at `/fto-alg-finder/web/`. The release was built with `./update-subwebsites.sh --lock` from the selected local revisions and published to Firebase Hosting. Private pre-release database/Auth snapshots are stored under `~/.local/state/ftoers/backups/`, outside the repository. Immutable staged public files and their hashes are under ignored `.release/` directories.
+**The owner lifted the deployment hold and authorized the first release on 20 November 2026.** Production is https://ftoers.web.app, with the simulator at `/virtual/`, algorithm finder browser build at `/fto-alg-finder/web/`, and optimal block solver at `/FB/`. The release was built with `./update-subwebsites.sh --lock` from the selected local revisions and published to Firebase Hosting. Private pre-release database/Auth snapshots are stored under `~/.local/state/ftoers/backups/`, outside the repository. Immutable staged public files and their hashes are under ignored `.release/` directories.
 
 The Free-plan Supabase project `nwcngiivvlprzdfelyad` is created and linked. All six migrations through `20261121000002`, Auth URLs/email-confirmation settings, and the username-login Edge Function are applied. Google OAuth and Brevo SMTP are configured. Google consent-screen branding still requires verification/publication in Google Auth Platform; it is separate from the website deployment.
 
@@ -24,9 +24,15 @@ The homepage is static. `npm ci` and `npm run build:shared` rebuild the vendored
 
 ### Updating subwebsites and shared files
 
+Select one or several sites with flags: `./update-subwebsites.sh --virtual --FB`. Flags are case-insensitive; `--fb` also works. Only selected sites are fetched, built, synced, and mounted. An FB-only or virtual-only update never loads Emscripten or rebuilds the algorithm finder. Use `./update-subwebsites.sh --FB --lock` to build the current FB checkout without fetching, or add `--plan` to preview actions. Positional IDs remain supported.
+
 Run `./update-subwebsites.sh --plan` to inspect the work without changing anything. Run `./update-subwebsites.sh --lock virtual` to sync shared account files and rebuild only the current simulator checkout without fetching Git changes. `--lock` alone builds all current submodules; normal runs update configured submodules first. `--skip-install` reuses already installed dependencies. The script works from any current directory and never deploys, stages, commits or pushes.
 
 `public/shared/` owns only account.js, account.css, config.js, the vendored SDK and its license. Simulator leaderboards and their styles live in the simulator's src/. In submodules.json, a consumer opts into shared files with `"shared": "public/shared"` relative to its build directory. Before building, the script copies the canonical files into that directory. These are real, checked-in files, not symlinks to a parent repo. Commit refreshed copies and their `.ftoers-shared.json` manifest in the consumer repo so a friend can clone and develop it independently. Local modifications cause a sync error before managed files are overwritten. To refresh a separate working checkout, run `node scripts/sync-shared.mjs /path/to/simulator/public/shared` from this repo. The alg finder currently has no account client, so it does not receive unused account files.
+
+The FB solver is live at **https://ftoers.web.app/FB/** (first deployed 23 November 2026). Its source is public and the app is entirely static; no backend changes are required.
+
+The FB entry builds the public [FTO-FB repository](https://github.com/Abid-speedcuber/FTO-FB) with Vite and mounts its `dist/` at `public/FB/`. Its relative asset paths support this subdirectory, including the solver worker. Generated mount paths are ignored; the submodule revision and configuration are tracked. Solver tables are saved locally in IndexedDB and require no account/backend integration.
 
 The alg finder entry installs dependencies in main/, runs `bash ../build.sh --web`, and mounts the entire generated public/ directory. This retains the download landing page and its /web/ browser app. The script checks both HTML entry points and the JS/WASM pair before mounting; it does not silently host an incomplete browser build. Activate Emscripten 4.0.20 and install Rust nightly with rust-src as described in the alg finder's main/WEB.md before running that build. Its output is ignored by Git and must be built on each machine. Firebase isolation headers for /fto-alg-finder/web/** are included locally; Firebase does not read the alg finder's _headers file.
 

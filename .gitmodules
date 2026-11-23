@@ -4,3 +4,6 @@
 [submodule "submodules/virtual"]
 	path = submodules/virtual
 	url = https://github.com/Abid-speedcuber/Virtual-FTO-hub
+[submodule "submodules/FB"]
+	path = submodules/FB
+	url = https://github.com/Abid-speedcuber/FTO-FB.git

@@ -104,3 +104,22 @@ test('Git updates preserve generated shared copies but refuse hand edits and sta
  assert.equal(await readFile(join(target,'profile.js'),'utf8'),'Independent developer edit');
  git('add','public/shared/profile.js');await assert.rejects(prepareSharedUpdate(repo,target,{source}),/Commit or unstage/);
 });
+
+test('site flags select one or several roots without loading an unselected SDK',async t=>{
+ const f=await fixture(t);
+ f.config.finder.emscripten='4.0.20';
+ f.config.FB={path:'FB',build:true};
+ await mkdir(join(f.root,'submodules/FB'),{recursive:true});
+ await writeFile(join(f.root,'submodules/FB/package-lock.json'),'{}');
+ await f.save();
+ f.environment.FTOERS_EMSDK_ENV=join(f.root,'missing/emsdk_env.sh');
+ let result=f.run('--fb','--plan');assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/Git update: FB/);assert.doesNotMatch(result.stdout,/public\/(finder|virtual)|Emscripten/);
+ result=f.run('--virtual','--FB','--lock','--skip-install');assert.equal(result.status,0,result.stderr);
+ const commands=(await readFile(f.log,'utf8')).trim().split('\n').map(JSON.parse);
+ assert.equal(commands.some(c=>c.name==='git'),false);
+ assert.equal(commands.filter(c=>c.name==='npm'&&c.args[0]==='run').length,2);
+ assert.ok(commands.every(c=>!c.cwd.includes('finder')));
+ assert.equal(await readlink(join(f.root,'public/FB')),'../submodules/FB/dist');
+ result=f.run('--LOCK-NOT-A-SITE','--plan');assert.notEqual(result.status,0);
+ result=f.run('--lock','--fb','--plan');assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/Git update: \(none\)/);assert.doesNotMatch(result.stdout,/public\/virtual/);
+});

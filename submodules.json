@@ -20,5 +20,9 @@
     "path": "./virtual",
     "build": true,
     "shared": "public/shared"
+  },
+  "FB": {
+    "path": "./FB",
+    "build": true
   }
 }
