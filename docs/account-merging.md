@@ -160,3 +160,20 @@ sign-ins and the live preview endpoint using disposable accounts (no merge
 confirmation). The reported transient `Failed to fetch` was not reproduced from
 127.0.0.1:5173 or localhost:5173; the affected page's exact origin is needed if it
 persists. No backend configuration was changed for this UI fix.
+
+
+## Backend readiness release — 22 November 2026
+
+The seven previously pending migrations (admin recovery, investigation holds,
+current submission windows, review pagination, keyboard snapshots, WCA review
+profiles, and the final merge compatibility pass) are now deployed. All twenty
+repository migrations are applied. The upgrade was checked in production order
+with 169 database assertions, then applied in a single transaction. Transactional
+checks confirmed identical reconstructed recordings, unchanged short links, and
+preserved profiles and submissions. A live administrator queue request succeeded;
+the public REST endpoint rejects anonymous review access. No frontend release was
+performed with this update.
+
+Workspace AGENTS.md now authorizes backend releases needed for hand testing and
+requires deployed frontend dependencies to be available. Frontend deployment
+still requires Abid's hand testing and explicit approval for each release.

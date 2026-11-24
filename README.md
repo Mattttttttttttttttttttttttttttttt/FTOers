@@ -133,3 +133,9 @@ The simulator now uses a separate bell/notifications dialog and leaderboard-rule
 Migration `20261121000004_investigation_holds.sql` is local only. It adds a private investigating state, mandatory solver-facing rejection/hold explanations, bounded and idempotent hold notifications, final decisions after investigation, and 30-day cleanup for held evidence. New submissions preserve ongoing investigations. Admin recovery explicitly warns about an existing investigation. A backward-compatible notification endpoint prevents older clients from rendering a held notice as a rejection. No hosted schema or website changes have been made for this update.
 
 The simulator adds a green/gray connection dot beside the avatar without server-side presence writes or additional polling. Notification copy uses full sentences and displays the administrator’s exact message.
+
+## Share previews
+
+The homepage, Simulator, First Block, and both Alg Finder entry pages include static Open Graph and Twitter metadata. Their absolute `og:image` URLs point to 1200×630 PNGs with the app’s logo and title, so link crawlers do not need JavaScript. Editable SVG compositions are kept alongside each PNG.
+
+In the sibling-project workspace, regenerate the images with `node scripts/generate-share-previews.mjs` from this repository. The generator uses the Simulator’s installed Playwright dependency and existing logos; it does not build WASM or deploy anything. Verify all entry points with `node --test tests/share-previews.test.mjs`. Source changes in the neighboring app repositories are picked up through the normal subwebsite update/release workflow.
